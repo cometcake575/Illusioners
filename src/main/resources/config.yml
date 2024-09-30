@@ -1,0 +1,10 @@
+# Use the illusioner texture from Minecraft: Dungeons
+dungeons-illusioners: false
+
+# If you wish to use your own resource pack, disable the pack here and merge the pack with your own pack
+# Default pack url: https://github.com/cometcake575/Illusioners/raw/refs/heads/main/IllusionerPack-Default.zip
+# Dungeons pack url: https://github.com/cometcake575/Illusioners/raw/refs/heads/main/IllusionerPack-Dungeons.zip
+enable-resource-pack: true
+
+# Do not touch this!
+config-version: 1.0.0
