@@ -226,7 +226,7 @@ public class Illusioners extends JavaPlugin implements Listener {
             illusioner.setRaid(evoker.getRaid());
             if (evoker.getRaid() != null) {
                 Raid raid = ((CraftRaid) evoker.getRaid()).getHandle();
-                raid.addWaveMob(evoker.getWave(), ((CraftIllusioner) illusioner).getHandle(), false);
+                raid.addWaveMob(evoker.getWave(), ((CraftIllusioner) illusioner).getHandle(), true);
                 if (illusioner.isPatrolLeader()) {
                     raid.setLeader(evoker.getWave(), ((CraftIllusioner) illusioner).getHandle());
                 }
