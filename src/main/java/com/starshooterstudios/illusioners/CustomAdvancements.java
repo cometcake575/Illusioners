@@ -41,6 +41,7 @@ public class CustomAdvancements {
     }
 
     public enum AdvancementFrame {
+        TASK("task"),
         GOAL("goal");
 
         private final String name;

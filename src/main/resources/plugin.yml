@@ -1,6 +1,6 @@
 name: Illusioners
 main: com.starshooterstudios.illusioners.Illusioners
-version: 1.0.2
+version: 1.1.0
 description: Adds improved functionality to Illusioners in PaperMC
 api-version: 1.21
 authors:

@@ -75,13 +75,38 @@ public class Illusioners extends JavaPlugin implements Listener {
             meta.getPersistentDataContainer().set(illusionKey, PersistentDataType.BOOLEAN, true);
         });
 
+        NamespacedKey popIllusionKey = new NamespacedKey(plugin, "pop_illusion");
         popIllusionAdvancement = CustomAdvancements.makeAdvancement(
-                new NamespacedKey(plugin, "pop_illusion"),
+                popIllusionKey,
                 "Not What He Seems",
                 "Pop an Illusioner's illusion",
                 shadowDust,
+                CustomAdvancements.AdvancementFrame.TASK,
+                new CustomAdvancements.ParentedAdvancementData(Key.key("minecraft:adventure/root")),
+                false,
+                true,
+                true,
+                false
+        );
+        popAllIllusionsAdvancement = CustomAdvancements.makeAdvancement(
+                new NamespacedKey(plugin, "pop_all_illusions"),
+                "Trial and Error",
+                "Pop all of an Illusioner's illusions",
+                shadowDust,
+                CustomAdvancements.AdvancementFrame.TASK,
+                new CustomAdvancements.ParentedAdvancementData(popIllusionKey),
+                false,
+                true,
+                true,
+                false
+        );
+        hitIllusionerFirstTryAdvancement = CustomAdvancements.makeAdvancement(
+                new NamespacedKey(plugin, "hit_illusioner_first_try"),
+                "Sixth Sense",
+                "Hit the real Illusioner without hitting any of its illusions",
+                shadowDust,
                 CustomAdvancements.AdvancementFrame.GOAL,
-                new CustomAdvancements.ParentedAdvancementData(Key.key("minecraft:adventure/voluntary_exile")),
+                new CustomAdvancements.ParentedAdvancementData(popIllusionKey),
                 false,
                 true,
                 true,
@@ -216,6 +241,8 @@ public class Illusioners extends JavaPlugin implements Listener {
     private final Random random = new Random();
 
     private CustomAdvancements.Advancement popIllusionAdvancement;
+    private CustomAdvancements.Advancement popAllIllusionsAdvancement;
+    private CustomAdvancements.Advancement hitIllusionerFirstTryAdvancement;
 
     @EventHandler
     public void onEntitySpawn(EntitySpawnEvent event) {
@@ -316,7 +343,7 @@ public class Illusioners extends JavaPlugin implements Listener {
         }
         if (event.getTarget() == null) return;
         if (event.getTarget().getPersistentDataContainer().has(illusionOwnerKey)) {
-            if (!wasSeenBy(event.getTarget(), event.getEntity())) {
+            if (wasNotSeenBy(event.getTarget(), event.getEntity())) {
                 List<Illusioner> illusions = getIllusions(event.getTarget());
                 if (illusions.isEmpty()) return;
                 Illusioner newTarget = illusions.get(random.nextInt(illusions.size()));
@@ -353,12 +380,12 @@ public class Illusioners extends JavaPlugin implements Listener {
         illusioner.getPersistentDataContainer().set(illusionSeenByKey, PersistentDataType.TAG_CONTAINER, container);
     }
 
-    public boolean wasSeenBy(Entity entity, Entity saw) {
+    public boolean wasNotSeenBy(Entity entity, Entity saw) {
         PersistentDataContainer container = entity.getPersistentDataContainer().getOrDefault(illusionSeenByKey, PersistentDataType.TAG_CONTAINER, entity.getPersistentDataContainer().getAdapterContext().newPersistentDataContainer());
         for (NamespacedKey key : container.getKeys()) {
-            if (saw.getUniqueId().toString().equalsIgnoreCase(key.getKey())) return true;
+            if (saw.getUniqueId().toString().equalsIgnoreCase(key.getKey())) return false;
         }
-        return false;
+        return true;
     }
 
     @EventHandler
@@ -367,6 +394,11 @@ public class Illusioners extends JavaPlugin implements Listener {
         if (event.getEntity() instanceof Interaction interaction) {
             Illusioner i = getIllusioner(interaction);
             if (i != null) {
+                if (event instanceof EntityDamageByEntityEvent damageByEntityEvent) {
+                    if (damageByEntityEvent.getDamager() instanceof Player player) {
+                        if (wasNotSeenBy(i, damageByEntityEvent.getDamager())) hitIllusionerFirstTryAdvancement.grant(player);
+                    }
+                }
                 setVisibility(i, true);
                 i.damage(event.getDamage(), event.getDamageSource());
             }
@@ -380,17 +412,23 @@ public class Illusioners extends JavaPlugin implements Listener {
             }
         }
         if (event.getEntity().getPersistentDataContainer().has(illusionKey)) {
+            Player p = null;
             if (event instanceof EntityDamageByEntityEvent damageByEntityEvent) {
                 Entity damager = SupernovaUtils.getTrueDamager(damageByEntityEvent.getDamager());
                 if (damager.getType().equals(EntityType.ILLUSIONER)) {
                     event.setCancelled(true);
                     return;
-                } else if (damager instanceof Player player) popIllusionAdvancement.grant(player);
+                } else if (damager instanceof Player player) {
+                    p = player;
+                    popIllusionAdvancement.grant(player);
+                }
                 Entity source = getIllusionSource(event.getEntity());
                 if (source != null) addSeenBy(source, damager);
             }
             event.setCancelled(true);
-            popIllusion(event.getEntity(), 1);
+            if (popIllusion(event.getEntity(), 1)) {
+                popAllIllusionsAdvancement.grant(p);
+            }
         }
     }
 
@@ -475,13 +513,14 @@ public class Illusioners extends JavaPlugin implements Listener {
         }
     }
 
-    public void popIllusion(Entity entity, float trailSpeed) {
+    public boolean popIllusion(Entity entity, float trailSpeed) {
         Location loc = entity.getLocation().add(0, 1, 0);
         entity.getWorld().spawnParticle(Particle.DUST, loc, 12, 0.4, 0.4, 0.4, new Particle.DustOptions(Color.GRAY, 1));
         entity.getWorld().spawnParticle(Particle.DUST, loc, 12, 0.3, 0.5, 0.3, new Particle.DustOptions(illusionerSecondaryColour, 1));
         Entity source = getIllusionSource(entity);
+        boolean all = false;
         if (source != null) {
-            removeIllusion(source, entity);
+            all = removeIllusion(source, entity);
             if (trailSpeed != 0) {
                 int tick = Bukkit.getCurrentTick();
                 final float[] size = {1};
@@ -500,12 +539,14 @@ public class Illusioners extends JavaPlugin implements Listener {
             }
         }
         entity.remove();
+        return all;
     }
 
-    public void removeIllusion(Entity source, Entity entity) {
+    public boolean removeIllusion(Entity source, Entity entity) {
         PersistentDataContainer container = source.getPersistentDataContainer().getOrDefault(illusionOwnerKey, PersistentDataType.TAG_CONTAINER, source.getPersistentDataContainer().getAdapterContext().newPersistentDataContainer());
         container.remove(new NamespacedKey(this, entity.getUniqueId().toString()));
         source.getPersistentDataContainer().set(illusionOwnerKey, PersistentDataType.TAG_CONTAINER, container);
+        return container.isEmpty();
     }
 
     @EventHandler
