@@ -17,6 +17,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.inventory.ItemStack;
@@ -44,6 +45,8 @@ public class Illusioners extends JavaPlugin implements Listener {
 
     private NamespacedKey interactionKey;
     private NamespacedKey illusionerDataKey;
+    private NamespacedKey shortBlindnessPotionKey;
+    private NamespacedKey longBlindnessPotionKey;
 
     @Override
     public void onEnable() {
@@ -63,8 +66,8 @@ public class Illusioners extends JavaPlugin implements Listener {
         illusionerDataKey = new NamespacedKey(plugin, "illusioner_data");
         interactionKey = new NamespacedKey(plugin, "illusioner_interaction");
 
-        NamespacedKey longBlindnessPotionKey = new NamespacedKey(plugin, "long_blindness_potion");
-        NamespacedKey shortBlindnessPotionKey = new NamespacedKey(plugin, "short_blindness_potion");
+        longBlindnessPotionKey = new NamespacedKey(plugin, "long_blindness_potion");
+        shortBlindnessPotionKey = new NamespacedKey(plugin, "short_blindness_potion");
 
         shadowDust = SupernovaUtils.createItem(Material.PRISMARINE_CRYSTALS, meta -> {
             meta.setCustomModelData(1);
@@ -318,6 +321,27 @@ public class Illusioners extends JavaPlugin implements Listener {
                 if (illusions.isEmpty()) return;
                 Illusioner newTarget = illusions.get(random.nextInt(illusions.size()));
                 event.setTarget(newTarget);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPrepareItemCraft(PrepareItemCraftEvent event) {
+        for (ItemStack item : event.getInventory().getMatrix()) {
+            if (item == null || item.getItemMeta() == null) continue;
+            boolean shortBlindness;
+            if (item.getItemMeta().getPersistentDataContainer().has(shortBlindnessPotionKey)) {
+                shortBlindness = true;
+            } else if (item.getItemMeta().getPersistentDataContainer().has(longBlindnessPotionKey)) {
+                shortBlindness = false;
+            } else return;
+            ItemStack result = event.getInventory().getResult();
+            if (result == null) return;
+            if (result.getItemMeta() instanceof PotionMeta meta) {
+                meta.addCustomEffect(new PotionEffect(PotionEffectType.BLINDNESS, shortBlindness ? 112 : 225, 0, false, true, true), false);
+                meta.displayName(Component.text("Arrow of Blindness").decoration(TextDecoration.ITALIC, false));
+                result.setItemMeta(meta);
+                event.getInventory().setResult(result);
             }
         }
     }
