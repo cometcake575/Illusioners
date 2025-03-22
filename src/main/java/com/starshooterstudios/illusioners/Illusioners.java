@@ -23,6 +23,7 @@ import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.inventory.meta.components.CustomModelDataComponent;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -34,14 +35,16 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 public class Illusioners extends JavaPlugin implements Listener {
     private final NamespacedKey blindnessPotionKey = new NamespacedKey("illusioners", "blindness_potion");
+    private static Illusioners instance;
+
+    public static Illusioners getInstance() {
+        return instance;
+    }
 
     private NamespacedKey interactionKey;
     private NamespacedKey illusionerDataKey;
@@ -50,13 +53,21 @@ public class Illusioners extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+        instance = this;
         saveDefaultConfig();
         illusionerSecondaryColour = getConfig().getBoolean("dungeons-illusioners") ? Color.PURPLE : Color.fromRGB(0, 0, 175);
         SupernovaUtils.initialize(this);
         initialize(this);
 
+        if (getConfig().getString("config-version", "1.0.0").equals("1.0.0")) {
+            getConfig().set("config-version", "1.1.1");
+            getConfig().set("enable-advancements", true);
+            getConfig().setComments("enable-advancements", List.of("Toggle advancements"));
+            saveConfig();
+        }
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     public void initialize(JavaPlugin plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
 
@@ -70,7 +81,9 @@ public class Illusioners extends JavaPlugin implements Listener {
         shortBlindnessPotionKey = new NamespacedKey(plugin, "short_blindness_potion");
 
         shadowDust = SupernovaUtils.createItem(Material.PRISMARINE_CRYSTALS, meta -> {
-            meta.setCustomModelData(1);
+            CustomModelDataComponent comp = meta.getCustomModelDataComponent();
+            comp.setStrings(Collections.singletonList("1"));
+            meta.setCustomModelDataComponent(comp);
             meta.displayName(Component.text("Shadow Dust").decoration(TextDecoration.ITALIC, false));
             meta.getPersistentDataContainer().set(illusionKey, PersistentDataType.BOOLEAN, true);
         });

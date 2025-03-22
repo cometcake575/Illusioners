@@ -10,6 +10,9 @@ import org.jetbrains.annotations.NotNull;
 public class CustomAdvancements {
     @SuppressWarnings("deprecation")
     public static @NotNull Advancement makeAdvancement(NamespacedKey key, String name, String description, ItemStack icon, AdvancementFrame frame, AdvancementData data, boolean hidden, boolean showToast, boolean announce, boolean showEnchanted) {
+
+        if (!Illusioners.getInstance().getConfig().getBoolean("enable-advancements")) return new DummyAdvancement();
+
         String s = data.getAdvancementFormat();
         s = s.replaceFirst("ITEM_ID", icon.getType().getKey().asString());
         int cmd;
@@ -24,6 +27,14 @@ public class CustomAdvancements {
         s = s.replaceFirst("ANNOUNCE", announce ? "true" : "false");
         s = s.replaceFirst("HIDDEN", hidden ? "true" : "false");
         return new RealAdvancement(Bukkit.getUnsafe().loadAdvancement(key, s));
+    }
+
+    public static class DummyAdvancement implements Advancement {
+
+        @Override
+        public void grant(Player player) {
+
+        }
     }
 
     public static class RealAdvancement implements Advancement {

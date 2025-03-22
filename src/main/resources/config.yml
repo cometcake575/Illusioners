@@ -6,5 +6,8 @@ dungeons-illusioners: true
 # Dungeons pack url: https://github.com/cometcake575/Illusioners/raw/refs/heads/main/IllusionerPack-Dungeons.zip
 enable-resource-pack: true
 
+# Toggle advancements
+enable-advancements: true
+
 # Do not touch this!
-config-version: 1.0.0
+config-version: 1.1.1
